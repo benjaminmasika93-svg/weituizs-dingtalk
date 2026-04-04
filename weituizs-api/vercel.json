@@ -1,6 +1,6 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/weituizs", "destination": "api/weituizs.js" }
+    { "source": "/api/weituizs", "destination": "/api/weituizs.js" }
   ]
 }
