@@ -1,74 +1,57 @@
+const MCP_GATEWAY = 'https://mcp-gw.dingtalk.com/server/bbe14f15cd8ec54e5ad58daf7729c8c9844786f8e84adada5d50e733e110d7be';
+const MCP_KEY = 'c35959c897ed52bf47b656a73d63aaa5';
+
+async function mcpCall(toolName, arguments_) {
+  const res = await fetch(`${MCP_GATEWAY}?key=${MCP_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: { name: toolName, arguments: arguments_ }
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.result;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Only POST allowed' });
   }
 
-  const {
-    title = '',
-    mp = '',
-    time = '',
-    cover = '',
-    copyright = '',
-    desc = '',
-    author = '',
-    link = ''
-  } = req.body || {};
+  const { title = '', mp = '', time = '', cover = '', copyright = '', desc = '', author = '', link = '' } = req.body || {};
 
   if (!title || !mp) {
     return res.status(400).json({ error: 'title and mp are required' });
   }
 
-  const appKey = process.env.DINGTALK_APP_KEY;
-  const appSecret = process.env.DINGTALK_APP_SECRET;
-  const baseId = process.env.DINGTALK_BASE_ID;
-  const tableId = process.env.DINGTALK_TABLE_ID;
-  const operatorId = process.env.DINGTALK_OPERATOR_ID;
+  const baseId = '14lgGw3P8vvEgQARTQokRgZ985daZ90D';
+  const tableId = 'wDcqpEX';
 
-  // Get access token
-  let accessToken;
-  try {
-    const tokenRes = await fetch('https://api.dingtalk.com/v1.0/oauth2/accessToken', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appKey, appSecret })
-    });
-    const tokenData = await tokenRes.json();
-    accessToken = tokenData.accessToken;
-    if (!accessToken) throw new Error('No access token');
-  } catch (e) {
-    return res.status(500).json({ error: 'Failed to get access token' });
-  }
-
-  // Field IDs for 微推文章 table
   const cells = {
-    'MsO9hJU': title,                          // 文章标题 (text)
-    'csOFXdL': mp,                              // 公众号 (text)
-    'HtD5oKd': time ? String(time).substring(0, 10) : '', // 发布时间 (date, YYYY-MM-DD)
-    'sLXflGM': cover ? [{ url: cover }] : [],  // 封面图片 (attachment)
-    'qfKmFJ0': String(copyright) === '1'        // 是否原创 (singleSelect)
+    'MsO9hJU': title,
+    'csOFXdL': mp,
+    'HtD5oKd': time ? String(time).substring(0, 10) : '',
+    'qfKmFJ0': String(copyright) === '1'
       ? { id: 'XaWTvhLDnZ', name: '原创' }
       : { id: 'd6f5TFkmfB', name: '非原创' },
-    'hSJBHr0': desc || '',                      // 摘要 (text)
-    'iB60SfK': author || '',                     // 作者 (text)
-    'E06P9Fn': link || ''                        // 原文链接 (url)
+    'hSJBHr0': desc || '',
+    'iB60SfK': author || '',
+    'E06P9Fn': link ? { text: link, link: link } : '',
+    'sLXflGM': cover ? [{ url: cover }] : []
   };
 
-  // Write record to DingTalk AI table
   try {
-    const rowRes = await fetch(`https://api.dingtalk.com/v1.0/notable/bases/${baseId}/sheets/${tableId}/records`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-acs-dingtalk-access-token': accessToken
-      },
-      body: JSON.stringify({
-        operatorId,
-        records: [{ cells }]
-      })
+    const result = await mcpCall('create_records', {
+      baseId,
+      tableId,
+      records: [{ cells }]
     });
-    const rowData = await rowRes.json();
-    return res.status(200).json({ ok: true, data: rowData });
+    return res.status(200).json({ ok: true, data: result });
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ ok: false, error: e.message });
   }
 }
