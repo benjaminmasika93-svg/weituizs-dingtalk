@@ -39,12 +39,23 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to get access token' });
   }
 
-  const copyrightMap = { '1': '原创', '0': '非原创' };
-  const copyrightText = copyrightMap[String(copyright)] || (copyright === 1 ? '原创' : '非原创');
+  // Field IDs for 微推文章 table
+  const cells = {
+    'MsO9hJU': title,                          // 文章标题 (text)
+    'csOFXdL': mp,                              // 公众号 (text)
+    'HtD5oKd': time ? String(time).substring(0, 10) : '', // 发布时间 (date, YYYY-MM-DD)
+    'sLXflGM': cover ? [{ url: cover }] : [],  // 封面图片 (attachment)
+    'qfKmFJ0': String(copyright) === '1'        // 是否原创 (singleSelect)
+      ? { id: 'XaWTvhLDnZ', name: '原创' }
+      : { id: 'd6f5TFkmfB', name: '非原创' },
+    'hSJBHr0': desc || '',                      // 摘要 (text)
+    'iB60SfK': author || '',                     // 作者 (text)
+    'E06P9Fn': link || ''                        // 原文链接 (url)
+  };
 
-  // Write row to DingTalk AI table
+  // Write record to DingTalk AI table
   try {
-    const rowRes = await fetch(`https://api.dingtalk.com/v1.0/notable/bases/${baseId}/sheets/${tableId}/rows`, {
+    const rowRes = await fetch(`https://api.dingtalk.com/v1.0/notable/bases/${baseId}/sheets/${tableId}/records`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -52,18 +63,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         operatorId,
-        rows: [{
-          cells: {
-            '文章标题': { text: title },
-            '公众号': { text: mp },
-            '发布时间': { date: time },
-            '封面图片': { text: cover },
-            '是否原创': { text: copyrightText },
-            '摘要': { text: desc || '' },
-            '作者': { text: author || '' },
-            '原文链接': { text: link || '' }
-          }
-        }]
+        records: [{ cells }]
       })
     });
     const rowData = await rowRes.json();
