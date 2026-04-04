@@ -1,0 +1,10 @@
+{
+  "name": "weituizs-dingtalk",
+  "version": "1.0.0",
+  "description": "接收微推文章并同步到钉钉AI表",
+  "main": "api/weituizs.js",
+  "scripts": {
+    "start": "node api/weituizs.js"
+  },
+  "dependencies": {}
+}
